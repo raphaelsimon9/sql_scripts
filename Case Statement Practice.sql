@@ -1,5 +1,14 @@
 use classicmodels;
 
+show tables;
+
+show index from customers;
+show index from employees;
+
+describe employees;
+
+create unique index index_unique_email on employees (email);
+
 select distinct country from classicmodels.customers;
 
 -- Group all the countries into their respective continents
