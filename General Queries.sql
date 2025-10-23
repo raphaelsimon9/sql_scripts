@@ -94,3 +94,39 @@ from students2;
 select class, sum(score) as `Total Score`
 from students2
 group by class;
+
+use classicmodels;
+
+select * from students2
+limit 5;
+
+--  Update a record
+update students2 
+set score = 92
+where name = 'Alice';
+
+update students2
+set score = 86, 
+	age = 18
+where name = 'bob';
+
+--  replace function to replace the values on a column
+update students2
+set name = replace(name, 'Bob', 'Bobs')
+where name like '%Bob%';
+
+-- replace multiple walues on a one column
+update students2
+set name = replace(replace(replace(name, 'Alice', 'Alices'), 'Carol', 'Carols'), 'Dave', 'Daves')
+where name like '%Alice%' or name like '%Carol%' or name like '%Dave%';
+
+
+describe customers;
+describe employees;
+describe offices;
+
+
+select e.employeenumber, concat_ws(' ', e.firstname, e.lastname) as `fullname`, o.officecode as 'office code from office table', e.officecode as 'office code from employees table', jobtitle 
+from employees e inner join offices o
+using(officecode); -- Applying the USING keyword to join instead of ON
+
