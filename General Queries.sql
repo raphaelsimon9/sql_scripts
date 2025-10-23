@@ -128,5 +128,5 @@ describe offices;
 
 select e.employeenumber, concat_ws(' ', e.firstname, e.lastname) as `fullname`, o.officecode as 'office code from office table', e.officecode as 'office code from employees table', jobtitle 
 from employees e inner join offices o
-using(officecode); -- Applying the USING keyword to join instead of ON
+using(officecode); -- Applying the USING keyword to join the tables instead of ON since the column names and datatypes are the same on the 2 tables
 
