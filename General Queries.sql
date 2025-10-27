@@ -130,3 +130,4 @@ select e.employeenumber, concat_ws(' ', e.firstname, e.lastname) as `fullname`, 
 from employees e inner join offices o
 using(officecode); -- Applying the USING keyword to join the tables instead of ON since the column names and datatypes are the same on the 2 tables
 
+drop database northwind;
