@@ -142,3 +142,18 @@ WITH remark as (
 )
 select * from remark
 where remark like 'loss%';
+
+describe orders;
+describe customers;
+describe orderdetails;
+describe products;
+describe categories;
+
+-- Get the quantity and unit price for each category per customer
+ select OrderID, companyName,
+ productName, categoryName, od.Quantity, od.unitPrice
+ from customers
+ join orders using(customerID)
+ join orderdetails od using(orderID)
+ join products using(productID)
+ join categories using(categoryID);
