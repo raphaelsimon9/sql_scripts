@@ -157,3 +157,83 @@ describe categories;
  join orderdetails od using(orderID)
  join products using(productID)
  join categories using(categoryID);
+
+
+-- Get the names and prices of all the products that have more than 100 units sold
+select p.productID ` Product ID`, p.productName `Product Name`, p.unitPrice `Unit Price`, sum(od.Quantity) `Quantity Sold`
+from products p
+inner join orderdetails od
+using(productID)
+where productID in (
+	select productID from orderdetails od
+    group by productID
+    having sum(od.Quantity) > 100
+    )
+group by productID;
+
+
+select * from categories limit 10;
+
+
+-- Which products have a price higher than the average price within their respective categories?
+select 
+	productName `Product Name`,
+	categoryName `Category Name`,
+    unitPrice `Unit Price`,
+	(select avg(unitPrice)
+		from products
+		where categoryID = p.categoryID
+	) `Avg Unit Price`,
+    (case
+		when unitPrice > (select avg(unitPrice) from products where categoryID = p.categoryID)
+        then 'Above Average'
+        else 'Below Average'
+	end) as Remark
+from products p
+inner join categories using(categoryID)
+where unitPrice > (
+	select avg(unitPrice)
+    from products
+    where categoryID = p.categoryID)
+group by categoryID, productName, unitPrice
+order by unitPrice;
+
+
+select 
+	productName `Product Name`,
+	categoryName `Category Name`,
+    unitPrice `Unit Price`,
+	(select avg(unitPrice)
+		from products
+		where categoryID = p.categoryID
+	) `Avg Unit Price`,
+    (case
+		when unitPrice > (select avg(unitPrice) from products where categoryID = p.categoryID)
+        then 'Above Average'
+        else 'Below Average'
+	end) as Remark
+from products p
+inner join categories using(categoryID)
+order by `Remark`;
+
+
+create view high_category_prices as
+select 
+	productName `Product Name`,
+	categoryName `Category Name`,
+    unitPrice `Unit Price`,
+	(select avg(unitPrice)
+		from products
+		where categoryID = p.categoryID
+	) `Avg Unit Price`,
+    (case
+		when unitPrice > (select avg(unitPrice) from products where categoryID = p.categoryID)
+        then 'Above Average'
+        else 'Below Average'
+	end) as Remark
+from products p
+inner join categories using(categoryID)
+order by `Remark`;
+
+
+select * from high_category_prices;
