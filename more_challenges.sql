@@ -196,13 +196,35 @@ where date_format(e1.hireDate, '%W%M') = date_format(e2.hireDate, '%W%M')
 and e1.EmployeeID != e2.EmployeeID;
 
 
--- Alternative solution to "Get the name of employees that were employeed in the same period: same month and weekday"
+-- Alternative solutions to "Get the name of employees that were employeed in the same period: same month and weekday" using Group_Concat
 select
 	monthname(e1.HireDate) `Hire Month`,
     dayname(e1.HireDate) `Hire Day`,
 	concat_ws(' ', group_concat(concat_ws(' ', e1.FirstName, e1.lastName) order by e1.EmployeeID separator ', '), 'were hired on the same weekday and month') as Employees
 from employees e1
-group by monthname(e1.HireDate), dayname(e1.HireDate)
+group by `Hire Month`, `Hire Day`
 having count(*) > 1;
+
+-- Another one
+select 
+	`Hire Month`,
+    `Hire Day`,
+    case
+		when name_count = 2 then concat(replace(names, ',', ' and'), ' were employed on the same month and week.')
+	else
+		concat(reverse(replace(reverse(names), ',', 'dna ')), ' were hired on the same weekday and month')
+	end as Employees
+from (
+select
+	monthname(e1.HireDate) `Hire Month`,
+    dayname(e1.HireDate) `Hire Day`,
+	group_concat(concat_ws(' ', e1.FirstName, e1.lastName) order by e1.EmployeeID separator ', ') as names,
+    count(*) as name_count
+from employees e1
+group by `Hire Month`, `Hire Day`
+having count(*) > 1
+) as sub_query;
+
+
 
 select * from employees;
