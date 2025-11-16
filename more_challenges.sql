@@ -4,15 +4,43 @@ INSERT INTO `Employees` (`EmployeeID`, `LastName`, `FirstName`, `Title`, `TitleO
 use sales;
 show tables;
 select * from employees;
--- A query to show the employees with the same salary
 
+-- A query to show the employees with the same salary
 SELECT 
-	DISTINCT e1.employeeID,
-    concat_ws(' ', e1.firstName, e1.lastName) AS 'Employee Full Name',
-    e1.salary
+	e1.employeeID, concat_ws(' ', e1.firstName, e1.lastName) AS 'Employee Full Name', e1.salary,
+    e2.employeeID, concat_ws(' ', e2.firstName, e2.lastName) AS 'Employee Full Name', e2.salary
 FROM employees e1, employees e2
 WHERE e1.salary = e2.salary
-AND e1.employeeID != e2.employeeID;
+AND e1.employeeID > e2.employeeID
+ORDER BY e1.employeeID;
+
+-- Alternative solution to "A query to show the employees with the same salary"
+SELECT	e1.employeeID, concat_ws(' ', e1.firstName, e1.lastName) FullName, e1.salary,
+		e2.employeeID, concat_ws(' ', e2.firstName, e2.lastName) FullName, e2.salary
+FROM employees e1
+INNER JOIN employees e2
+ON e1.salary = e2.salary
+WHERE e1.employeeID > e2.employeeID
+ORDER BY e1.employeeID;
+
+-- A query to show the employees with the greater salary
+SELECT	e1.employeeID, concat_ws(' ', e1.firstName, e1.lastName) FullName, e1.salary,
+		e2.employeeID, concat_ws(' ', e2.firstName, e2.lastName) FullName, e2.salary
+FROM employees e1
+INNER JOIN employees e2
+ON e1.salary > e2.salary
+ORDER BY e1.employeeID;
+
+-- Employees and their reporting managers
+SELECT	e1.employeeID, concat_ws(' ', e1.firstname, e1.lastname) `Employee Name`,
+		COALESCE(e1.ReportsTo, 'No Reporting Manager') `Manager ID`,
+        (IF(concat_ws(' ', e2.firstname, e2.lastname) = '' 
+			OR concat_ws(' ', e2.firstname, e2.lastname) IS NULL, 'No Reporting Manager',
+				concat_ws(' ', e2.firstname, e2.lastname))
+		) `Manager Name`
+FROM	employees e1
+LEFT JOIN	employees e2
+ON		e1.ReportsTo = e2.employeeID;
 
 
 -- Customers that have not placed any orders using the SubQuery Method
