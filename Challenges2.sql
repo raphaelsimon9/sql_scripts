@@ -129,4 +129,29 @@ WHERE	unit_price <
 		FROM	products
 		WHERE	factory = 'Wicked Choccy''s');
         
-        
+
+-- Find the second highest salary
+USE analytics_db;
+SELECT * FROM salaries ORDER BY salary DESC;
+
+SELECT	MAX(salary)
+FROM	salaries
+WHERE salary < (SELECT MAX(salary)
+					FROM salaries);
+                    
+
+-- Find duplicate playerIDs in the salary table
+SELECT * FROM salaries;
+
+SELECT	playerID, COUNT(playerID) AS Duplicates
+FROM	salaries
+GROUP BY playerID
+HAVING COUNT(playerID) > 1;
+
+-- How many players have the same salaries
+SELECT	salary, COUNT(playerID) AS Players_With_Same_Salaries
+FROM	salaries
+GROUP BY salary
+HAVING COUNT(playerID) > 1
+ORDER BY salary DESC;
+

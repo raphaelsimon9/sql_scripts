@@ -145,7 +145,7 @@ SELECT
 )
 SELECT
 	c.companyName,
-	concat('$',format(kk.TotalOrder, 2)) "Total Order Placed",
+	concat('$',round(kk.TotalOrder, 2)) "Total Order Placed",
   CASE
     WHEN kk.TotalOrder < 1000 THEN 'Very Low Order'
     WHEN kk.TotalOrder BETWEEN 1000 AND 5000 THEN 'Low Order'
@@ -158,8 +158,7 @@ FROM
 INNER JOIN
   1996Orders kk
 ON c.customerid = kk.customerid
-ORDER BY
-  "Total Order Placed" DESC;
+ORDER BY round(kk.TotalOrder, 2) DESC;
   
 /*
   SELECT

@@ -5,15 +5,15 @@ WITH remark as (
 	select o.orderID as `Order ID`,
 	companyName as `Customer Name`,
 	concat_ws(' ', firstName, lastName) as `Employee Name`,
-	concat('$ ',format(sum(Quantity * p.UnitPrice),2)) as `Purchasing Price`,
-	concat('$ ',format(sum(od.UnitPrice * Quantity),2)) as `Selling Price`,
-	concat('$ ',format(sum(abs(od.UnitPrice * Quantity - Quantity * p.UnitPrice)),2)) as `Absolute Profit/Loss`,
+	concat('$ ',round(sum(Quantity * p.UnitPrice),2)) as `Purchasing Price`,
+	concat('$ ',round(sum(od.UnitPrice * Quantity),2)) as `Selling Price`,
+	concat('$ ',round(sum(abs(od.UnitPrice * Quantity - Quantity * p.UnitPrice)),2)) as `Absolute Profit/Loss`,
 	(case
 		when sum(od.UnitPrice * Quantity - Quantity * p.UnitPrice) < 0
-		then concat('Loss of ', concat('$ ',format(sum(abs(od.UnitPrice * Quantity - Quantity * p.UnitPrice)),2)))
+		then concat('Loss of ', concat('$ ',round(sum(abs(od.UnitPrice * Quantity - Quantity * p.UnitPrice)),2)))
 		when sum(od.UnitPrice * Quantity - Quantity * p.UnitPrice) = 0
 		then 'No Profit / Loss'
-		else concat('Profit of ', concat('$ ',format(sum(abs(od.UnitPrice * Quantity - Quantity * p.UnitPrice)),2)))
+		else concat('Profit of ', concat('$ ',round(sum(abs(od.UnitPrice * Quantity - Quantity * p.UnitPrice)),2)))
 		end) as Remark
 	from employees
 	join orders o using(employeeID)
@@ -69,7 +69,7 @@ select
 	concat_ws(' ', firstName, lastName) Employee,
 	toe.`Number of Orders` 'Number of Orders Taken',
     tlo.`Number of Late Orders` 'Number of Late Orders',
-    concat(format(((tlo.`Number of Late Orders`/toe.`Number of Orders`)*100),2), '%') as `Percentage of Late Orders`
+    concat(round(((tlo.`Number of Late Orders`/toe.`Number of Orders`)*100),2), '%') as `Percentage of Late Orders`
 from employees e
 inner join totalOrdersByEmployee toe
 on e.EmployeeID = toe.employeeID
@@ -81,7 +81,7 @@ order by ((tlo.`Number of Late Orders`/toe.`Number of Orders`)*100) desc
 
 
 -- Return all orders over $200 and also the number of orders over $200
-WITH total_amount_spent AS (SELECT	order_id, FORMAT(SUM(o.units * p.unit_price),2) AS Total_Order
+WITH total_amount_spent AS (SELECT	order_id, ROUND(SUM(o.units * p.unit_price),2) AS Total_Order
 							FROM	orders o
 							LEFT JOIN	products p
 							ON			o.product_id = p.product_id
@@ -123,3 +123,83 @@ WITH RECURSIVE employee_hierarchy AS (
 									)
 SELECT *
 FROM employee_hierarchy;
+
+
+WITH 1996Orders AS (
+					  SELECT
+						c.customerid,
+						c.companyName,
+						sum(od.unitprice * od.quantity) as TotalOrder
+					  FROM orders o
+					  INNER JOIN orderdetails od
+					  ON o.orderid = od.orderid
+					  INNER JOIN customers c
+					  ON c.customerid = o.customerid
+					  WHERE
+						EXTRACT(YEAR FROM o.orderdate) = 1996
+					  GROUP BY
+						c.customerid, c.companyName
+				)
+SELECT
+	c.companyName,
+	concat('$',round(kk.TotalOrder, 2)) "Total Order Placed",
+  CASE
+    WHEN kk.TotalOrder < 1000 THEN 'Very Low Order'
+    WHEN kk.TotalOrder BETWEEN 1000 AND 5000 THEN 'Low Order'
+    WHEN kk.TotalOrder BETWEEN 5001 AND 10000 THEN 'Medium Order'
+    WHEN kk.TotalOrder BETWEEN 10001 AND 15000 THEN 'High Order'
+    ELSE 'Very High Order'
+  END Comment
+FROM
+  customers c
+INNER JOIN
+  1996Orders kk
+ON c.customerid = kk.customerid
+ORDER BY round(kk.TotalOrder, 2) DESC;
+
+
+-- Calculate the amount spent on each product, within each order
+USE analytics_db;
+
+WITH product_spend AS (
+						SELECT	
+								o.order_id,
+								o.product_id,
+								p.product_name,
+								o.units * p.unit_price AS amount_spent
+						FROM	orders o LEFT JOIN products p
+						ON		o.product_id = p.product_id
+					)
+SELECT	order_id,
+		product_id,
+        product_name,
+        SUM(amount_spent) AS total_spent
+FROM	product_spend
+GROUP BY	order_id, product_id, product_name
+ORDER BY	order_id, product_name;
+
+
+-- Calculate the total spend for each customer and put them into BINs of $0 - $10, $10 - 20, etc
+SELECT	customer_id,
+        ROUND(SUM(units * unit_price),2) AS total_spend,
+        FLOOR(SUM(units * unit_price) / 10) * 10 AS total_spend_bins
+FROM	orders o LEFT JOIN products p
+ON		o.product_id = p.product_id
+GROUP BY customer_id;
+
+
+-- Categorize the customers Total Spend into bins
+WITH bins AS (
+				SELECT	customer_id,
+						ROUND(SUM(units * unit_price),2) AS total_spend,
+						FLOOR(SUM(units * unit_price) / 10) * 10 AS total_spend_bin
+				FROM	orders o LEFT JOIN products p
+				ON		o.product_id = p.product_id
+				GROUP BY customer_id
+			)
+SELECT	CONCAT_WS(' - ', total_spend_bin + 1 , total_spend_bin + 10) as 'Total Spend Bins',
+		COUNT(customer_id) AS 'Number of Customers'
+FROM bins
+GROUP BY total_spend_bin
+ORDER BY total_spend_bin;
+

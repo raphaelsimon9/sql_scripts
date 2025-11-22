@@ -98,12 +98,12 @@ order by o.orderID asc;
 select o.orderID as `Order ID`,
 companyName as `Customer Name`,
 concat_ws(' ', firstName, lastName) as `Employee Name`,
-concat('$ ',format(sum(Quantity * p.UnitPrice),2)) as `Purchasing Price`,
-concat('$ ',format(sum(od.UnitPrice * Quantity),2)) as `Selling Price`,
-concat('$ ',format(sum(abs(od.UnitPrice * Quantity - Quantity * p.UnitPrice)),2)) as `Absolute Profit/Loss`,
+concat('$ ',round(sum(Quantity * p.UnitPrice),2)) as `Purchasing Price`,
+concat('$ ',round(sum(od.UnitPrice * Quantity),2)) as `Selling Price`,
+concat('$ ',round(sum(abs(od.UnitPrice * Quantity - Quantity * p.UnitPrice)),2)) as `Absolute Profit/Loss`,
 (case
 	when sum(od.UnitPrice * Quantity - Quantity * p.UnitPrice) < 0
-    then concat('Loss of ', concat('$ ',format(sum(abs(od.UnitPrice * Quantity - Quantity * p.UnitPrice)),2)))
+    then concat('Loss of ', concat('$ ',round(sum(abs(od.UnitPrice * Quantity - Quantity * p.UnitPrice)),2)))
     when sum(od.UnitPrice * Quantity - Quantity * p.UnitPrice) = 0
     then 'No Profit / Loss'
     else concat('Profit of ', concat('$ ',format(sum(abs(od.UnitPrice * Quantity - Quantity * p.UnitPrice)),2)))
