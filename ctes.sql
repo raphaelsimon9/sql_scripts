@@ -107,7 +107,7 @@ WITH RECURSIVE dates(date) AS	(
 SELECT date FROM dates;
 
 
--- Get the reporting hierarchy for each employee
+-- QUESTION: Get the reporting hierarchy for each employee
 USE sales;
 
 WITH RECURSIVE employee_hierarchy AS (
@@ -125,6 +125,14 @@ SELECT *
 FROM employee_hierarchy;
 
 
+/* QUESTION: Get the names of customers who placed orders in 1996 along with their total orders. Include the following comments;
+	Below $1000, 'Very Low Order'
+    Between $1000 and $1500, 'Low Order'
+    Between $5001 and $10000, 'Medium Order'
+    Between $10001 and $15000, 'High Order'
+    Above $15000, 'Very High Order'
+  */
+-- SOLUTION --
 WITH 1996Orders AS (
 					  SELECT
 						c.customerid,
@@ -158,7 +166,7 @@ ON c.customerid = kk.customerid
 ORDER BY round(kk.TotalOrder, 2) DESC;
 
 
--- Calculate the amount spent on each product, within each order
+-- QUESTION: Calculate the amount spent on each product, within each order
 USE analytics_db;
 
 WITH product_spend AS (
@@ -179,7 +187,8 @@ GROUP BY	order_id, product_id, product_name
 ORDER BY	order_id, product_name;
 
 
--- Calculate the total spend for each customer and put them into BINs of $0 - $10, $10 - 20, etc
+-- QUESTION: Calculate the total spend for each customer and put them into BINs of $0 - $10, $10 - 20, etc
+-- SOLUTION --
 SELECT	customer_id,
         ROUND(SUM(units * unit_price),2) AS total_spend,
         FLOOR(SUM(units * unit_price) / 10) * 10 AS total_spend_bins
@@ -189,6 +198,7 @@ GROUP BY customer_id;
 
 
 -- Categorize the customers Total Spend into bins
+-- SOLUTION --
 WITH bins AS (
 				SELECT	customer_id,
 						ROUND(SUM(units * unit_price),2) AS total_spend,
@@ -203,3 +213,86 @@ FROM bins
 GROUP BY total_spend_bin
 ORDER BY total_spend_bin;
 
+
+-- QUESTION: A student's record keeps coming as a duplicate, generate a report that excludes the duplicated record.
+-- SOLUTION --
+-- Check the entire table Note: This is a small table
+SELECT	*
+FROM students
+ORDER BY student_name;
+
+-- Counting the number of times each student occurs in the table
+SELECT	*,
+		ROW_NUMBER() OVER(PARTITION BY student_name) AS student_count
+FROM students; -- This shows that Noah Scott is the duplicate student
+
+-- I need to rank the highest id number as 1 since it is the most recent record
+SELECT	*,
+		ROW_NUMBER() OVER(PARTITION BY student_name ORDER BY id DESC) AS student_count
+FROM students;
+
+-- Final query for the report. Using a CTE so that I can filter all the students in rank 1
+WITH sc AS (
+			SELECT	*,
+					ROW_NUMBER() OVER(PARTITION BY student_name ORDER BY id DESC) AS student_count
+			FROM students)
+SELECT	*
+FROM	sc
+WHERE	student_count = 1
+ORDER BY id;
+
+-- Using a SUBQUERY for the final report
+SELECT	*
+FROM	(
+			SELECT	*,
+					ROW_NUMBER() OVER(PARTITION BY student_name ORDER BY id DESC) AS student_count
+			FROM students
+		) AS sc
+WHERE student_count = 1
+ORDER BY id;
+
+
+-- QUESTION: Calaculate 3 months Moving Averages of the happiness scores
+SELECT	country, year,
+		happiness_score,
+        ROUND(AVG(happiness_score) OVER(PARTITION BY country ORDER BY year ROWS BETWEEN 2 PRECEDING AND CURRENT ROW), 3) as Moving_Avg
+FROM	happiness_scores
+ORDER BY country, year;
+
+
+-- Generate a report that shows the total sales for each month, cummulative sum of sales, and the 6-months moving average of the sales
+SELECT	*	FROM	orders;
+SELECT	*	FROM	products;
+DESCRIBE orders;
+UPDATE orders
+SET order_date = STR_TO_DATE(order_date, '%m/%e/%y');
+ALTER TABLE orders
+MODIFY order_date DATE;
+
+WITH monthly_sales AS (
+						SELECT	YEAR(order_date) AS Year, MONTH(order_date) AS Month,
+								ROUND(SUM(o.units * p.unit_price)) AS Total_Sales
+						FROM	orders o LEFT JOIN products p
+						ON		o.product_id = p.product_id
+						GROUP BY YEAR(order_date), MONTH(order_date)
+						ORDER BY YEAR(order_date), MONTH(order_date)
+					)
+SELECT	Year, Month, Total_Sales,
+		SUM(Total_Sales) OVER(ORDER BY Year,Month) AS Cummulative_Sales,
+        ROUND(AVG(Total_Sales) OVER(ORDER BY Year, Month ROWS BETWEEN 5 PRECEDING AND CURRENT ROW)) AS '6_Months_Moving_Average'
+FROM monthly_sales;
+
+
+-- Add a sub total for each year's total sales
+WITH mnth_sales AS (
+						SELECT	YEAR(order_date) AS Year, MONTH(order_date) AS Month,
+								ROUND(SUM(o.units * p.unit_price)) AS Total_Sales
+						FROM	orders o LEFT JOIN products p
+						ON		o.product_id = p.product_id
+						GROUP BY YEAR(order_date), MONTH(order_date)
+						ORDER BY YEAR(order_date), MONTH(order_date)
+                    )
+
+SELECT	Year, COALESCE(Month, CONCAT_WS(' ', Year, 'SubTotal')) AS 'Month', SUM(Total_Sales) AS 'Total Sales'
+FROM	mnth_sales
+GROUP BY Year, Month WITH ROLLUP;

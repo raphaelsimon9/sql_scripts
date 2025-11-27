@@ -1,6 +1,7 @@
 USE analytics_db;
 
 -- Get the Prior Year's Happiness Score
+-- SOLUTION --
 SELECT	year, country, happiness_score,
 		COALESCE(LAG(happiness_score) OVER(PARTITION BY country ORDER BY year), 0) AS Next_Year_Score
         -- ROW_NUMBER() OVER(PARTITION BY country ORDER BY year) AS Row_Num,
@@ -8,7 +9,8 @@ SELECT	year, country, happiness_score,
         -- DENSE_RANK() OVER(PARTITION BY country ORDER BY year) AS Dense_Rnk
 FROM	happiness_scores;
 
--- Get the change in the yearly happiness score
+-- QUESTION: Get the change in the yearly happiness score
+-- SOLUTION --
 WITH prior_hs AS
 				(SELECT	year, country, happiness_score,
 						COALESCE(LAG(happiness_score) OVER(PARTITION BY country ORDER BY year), 0) AS Previous_Year_Score

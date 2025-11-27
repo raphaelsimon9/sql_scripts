@@ -237,3 +237,48 @@ order by `Remark`;
 
 
 select * from high_category_prices;
+
+
+-- QUESTION: Calaculate 3 months Moving Averages of the happiness scores
+SELECT	country, year,
+		happiness_score,
+        ROUND(AVG(happiness_score) OVER(PARTITION BY country ORDER BY year ROWS BETWEEN 2 PRECEDING AND CURRENT ROW), 3) as Moving_Avg
+FROM	happiness_scores
+ORDER BY country, year;
+
+
+-- Generate a report that shows the total sales for each month, cummulative sum of sales, and the 6-months moving average of the sales
+SELECT	*	FROM	orders;
+SELECT	*	FROM	products;
+DESCRIBE orders;
+UPDATE orders
+SET order_date = STR_TO_DATE(order_date, '%m/%e/%y');
+ALTER TABLE orders
+MODIFY order_date DATE;
+
+WITH monthly_sales AS (
+						SELECT	YEAR(order_date) AS Year, MONTH(order_date) AS Month,
+								ROUND(SUM(o.units * p.unit_price)) AS Total_Sales
+						FROM	orders o LEFT JOIN products p
+						ON		o.product_id = p.product_id
+						GROUP BY YEAR(order_date), MONTH(order_date)
+						ORDER BY YEAR(order_date), MONTH(order_date)
+					)
+SELECT	Year, Month, Total_Sales,
+		SUM(Total_Sales) OVER(ORDER BY Year,Month) AS Cummulative_Sales,
+        ROUND(AVG(Total_Sales) OVER(ORDER BY Year, Month ROWS BETWEEN 5 PRECEDING AND CURRENT ROW)) AS '6_Months_Moving_Average'
+FROM monthly_sales;
+
+-- Add a sub total for each year's total sales
+WITH mnth_sales AS (
+						SELECT	YEAR(order_date) AS Year, MONTH(order_date) AS Month,
+								ROUND(SUM(o.units * p.unit_price)) AS Total_Sales
+						FROM	orders o LEFT JOIN products p
+						ON		o.product_id = p.product_id
+						GROUP BY YEAR(order_date), MONTH(order_date)
+						ORDER BY YEAR(order_date), MONTH(order_date)
+                    )
+
+SELECT	Year, COALESCE(Month, CONCAT_WS(' ', Year, 'SubTotal')) AS 'Month', SUM(Total_Sales) AS 'Total Sales'
+FROM	mnth_sales
+GROUP BY Year, Month WITH ROLLUP;
