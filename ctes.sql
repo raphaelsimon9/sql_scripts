@@ -296,3 +296,26 @@ WITH mnth_sales AS (
 SELECT	Year, COALESCE(Month, CONCAT_WS(' ', Year, 'SubTotal')) AS 'Month', SUM(Total_Sales) AS 'Total Sales'
 FROM	mnth_sales
 GROUP BY Year, Month WITH ROLLUP;
+
+
+# Write a solution to find the second highest distinct salary from the Employee table. If there is no second highest salary, return null
+# Write your MySQL query statement below
+WITH rn AS (SELECT  DISTINCT salary,
+        DENSE_RANK() OVER(ORDER BY salary DESC) AS row_num
+FROM    employee)
+
+SELECT IFNULL(
+                (SELECT  salary
+                FROM    rn
+                WHERE   row_num = 2),
+            NULL) AS SecondHighestSalary
+
+/* Alternate Solution to the above question 
+SELECT (
+    SELECT DISTINCT Salary
+    FROM Employee
+    ORDER BY Salary DESC
+    LIMIT 1 OFFSET 1
+) AS SecondHighestSalary;
+
+*/
