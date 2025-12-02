@@ -317,5 +317,36 @@ SELECT (
     ORDER BY Salary DESC
     LIMIT 1 OFFSET 1
 ) AS SecondHighestSalary;
-
 */
+
+
+-- Write a solution to find the nth highest distinct salary from the Employee table. If there are less than n distinct salaries, return null.
+DELIMITER //
+CREATE FUNCTION getNthHighestSalary(N INT) RETURNS INT -- Creating the function
+DETERMINISTIC 										   
+READS SQL DATA
+BEGIN
+  RETURN (
+      # Write your MySQL query statement below.
+        WITH rn AS (SELECT  DISTINCT salary,
+        DENSE_RANK() OVER(ORDER BY salary DESC) AS row_num
+        FROM    salaries)
+
+        SELECT IFNULL(
+                (SELECT  salary
+                FROM    rn
+                WHERE   row_num = N),
+            NULL) AS SecondHighestSalary      
+
+  );
+END //
+DELIMITER ;
+
+-- DROP FUNCTION analytics_db.getNthHighestSalary;
+
+SELECT	getNthHighestSalary(3);  -- Calling the getNHighestSalary Function
+
+
+SELECT  DISTINCT salary,
+        DENSE_RANK() OVER(ORDER BY salary DESC) AS row_num
+FROM    salaries;
