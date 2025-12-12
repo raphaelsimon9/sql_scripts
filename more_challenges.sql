@@ -255,3 +255,184 @@ having count(*) > 1
 
 
 select * from employees;
+
+-- ---- 3/12/2025 -------
+-- QUESTION: Find products that were never ordered
+USE sales;
+SHOW TABLES;
+DESCRIBE products;
+DESCRIBE orderdetails;
+
+-- First select all the products in the products table
+SELECT	productID	FROM	products LIMIT 10;
+
+-- Next select all the products in the orderdetails table that are not found (NOT IN) in the products table
+SELECT	o.productID, p.ProductName
+FROM	orderdetails o LEFT JOIN products p
+ON		o.productID = p.productID
+WHERE	o.productID IN (SELECT	productID	FROM	products)
+GROUP BY o.productID											-- Using Group By instead of the distinct keyword
+ORDER BY	o.productID;
+
+-- Check all columns that have a particular column_name in a particular schema
+SELECT	TABLE_NAME
+FROM	INFORMATION_SCHEMA.COLUMNS
+WHERE	COLUMN_NAME = 'email'
+AND		TABLE_SCHEMA = 'analytics_db';
+
+SELECT	TABLE_NAME
+FROM	INFORMATION_SCHEMA.COLUMNS
+WHERE	COLUMN_NAME LIKE 'department'
+AND		TABLE_SCHEMA = 'analytics_db';
+
+-- QUESTION: Extract the domain name from the emails
+USE analytics_db;
+SELECT
+		SUBSTR(email, INSTR(email, '@') + 1) AS Domain
+FROM	students;
+
+-- QUESTION: Find the number of students in each department
+SELECT	TABLE_NAME
+FROM	INFORMATION_SCHEMA.COLUMNS
+WHERE	COLUMN_NAME = 'email'
+AND		TABLE_SCHEMA = 'analytics_db';
+
+DESCRIBE	student_grades;
+
+-- Solution
+SELECT	department, COUNT(student_id) 'Number of Students'
+FROM	student_grades
+GROUP BY department;
+
+-- Find the fullnames of students that have their lastnames ending with n and contains only 6 alphabets
+DESCRIBE	students;
+
+-- Solution
+SELECT	*
+FROM	students
+WHERE	SUBSTRING_INDEX(student_name, ' ', -1) LIKE '%n'
+AND		LENGTH(SUBSTRING_INDEX(student_name, ' ', -1)) = 6;
+
+
+-- Find the employees who earn more than their managers.
+USE sales;
+DESCRIBE	employees;
+
+SELECT	e1.employeeID, e1.FirstName, e1.ReportsTo, e1.Salary, e2.employeeID, e2.FirstName, e2.salary
+FROM	employees e1 INNER JOIN employees e2
+ON		e1.ReportsTo = e2.EmployeeID
+AND		e1.salary > e2.salary;
+
+-- Solution without Joins
+SELECT	e.employeeID, e.FirstName, e.ReportsTo, e.Salary, m.employeeID, m.FirstName, m.salary
+FROM	employees e, employees m
+WHERE	m.EmployeeID = e.ReportsTo
+AND		e.salary > m.salary;
+
+-- QUESTION: Report all duplicate emails.
+USE analytics_db;
+
+-- Solution
+SELECT	email AS Email
+FROM	students
+GROUP BY email
+HAVING COUNT(email) > 1;
+
+
+-- Find all customers who never order anything.
+SELECT  name AS Customers
+FROM    Customers
+WHERE   id NOT IN (SELECT  customerId  FROM  Orders);
+
+
+-- Find employees who have the highest salary in each of the departments.
+USE sales;
+SHOW TABLES;
+DESCRIBE employees;
+
+-- Solution
+WITH rn AS (SELECT	employeeID, city, Salary,
+		DENSE_RANK() OVER(PARTITION BY city ORDER BY salary DESC) AS rnk
+FROM	employees)
+
+SELECT	City, employeeID, Salary
+FROM	rn
+WHERE	rnk = 1;
+
+-- Solution given on LeetCode
+# Write your MySQL query statement below
+WITH rn AS (SELECT d.name AS Department, e.name AS Employee, e.salary AS Salary,
+        DENSE_RANK() OVER(PARTITION BY d.name ORDER BY e.salary DESC) as rnk
+FROM    Employee e LEFT JOIN Department d
+ON      e.departmentid = d.id)
+
+SELECT  Department, Employee, Salary
+FROM    rn
+WHERE   rnk = 1;
+
+
+-- Find the departments Top Three Salaries
+
+-- Solution
+WITH rn AS (SELECT d.name AS Department, e.name AS Employee, e.salary AS Salary,
+        DENSE_RANK() OVER(PARTITION BY d.name ORDER BY e.salary DESC) as rnk
+FROM    Employee e LEFT JOIN Department d
+ON      e.departmentid = d.id)
+
+SELECT  Department, Employee, Salary
+FROM    rn
+WHERE   rnk IN (1, 2, 3);
+
+
+-- ---- 4/12/2025 -------
+-- QUESTION: Write a solution to report the movies with an odd-numbered ID and a description that is not "boring". 
+-- Return the result table ordered by rating in descending order.
+SELECT  id, movie, description, rating
+FROM    Cinema
+WHERE   MOD(id, 2) = 1
+AND     description != 'boring'
+ORDER BY    rating DESC;
+
+/*
+Write a solution to:
+Find the name of the user who has rated the greatest number of movies. In case of a tie, return the lexicographically smaller user name.
+Find the movie name with the highest average rating in February 2020. In case of a tie, return the lexicographically smaller movie name.
+*/
+# Write your MySQL query statement below
+(SELECT     u.name AS results
+FROM        Movies m INNER JOIN MovieRating mr
+ON          m.movie_id = mr.movie_id
+INNER JOIN  Users u
+ON          u.user_id = mr.user_id
+GROUP BY    u.user_id, u.name
+ORDER BY    COUNT(*) DESC, u.name ASC
+LIMIT       1)
+
+UNION ALL
+
+(SELECT     m.title AS results
+FROM        Movies m INNER JOIN MovieRating mr
+ON          m.movie_id = mr.movie_id
+INNER JOIN  Users u
+ON          u.user_id = mr.user_id
+WHERE       mr.created_at >= '2020-02-01' AND mr.created_at < '2020-03-01'
+GROUP BY    m.movie_id, m.title
+ORDER BY    AVG(mr.rating) DESC, m.title ASC
+LIMIT       1);
+
+-- ---- 5/12/2025 -------
+-- LeetCode QUESTION: Write a solution to find the number of times each student attended each exam.
+-- Return the result table ordered by student_id and subject_name.
+
+SELECT      s.student_id,
+            s.student_name,
+            sj.subject_name,
+            COUNT(e.subject_name) AS attended_exams
+FROM        Students s    CROSS JOIN    Subjects sj
+LEFT JOIN   Examinations e
+ON          s.student_id = e.student_id
+AND         sj.subject_name = e.subject_name
+GROUP BY    s.student_id,
+            s.student_name,
+            sj.subject_name
+ORDER BY    s.student_id, sj.subject_name;

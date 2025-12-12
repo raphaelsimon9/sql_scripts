@@ -350,3 +350,192 @@ SELECT	getNthHighestSalary(3);  -- Calling the getNHighestSalary Function
 SELECT  DISTINCT salary,
         DENSE_RANK() OVER(ORDER BY salary DESC) AS row_num
 FROM    salaries;
+
+
+-- QUESTION: Find employees who have the highest salary in each of the departments.
+USE sales;
+SHOW TABLES;
+DESCRIBE employees;
+
+-- Solution
+WITH rn AS (SELECT	employeeID, city, Salary,
+		DENSE_RANK() OVER(PARTITION BY city ORDER BY salary DESC) AS rnk
+FROM	employees)
+
+SELECT	City, employeeID, Salary
+FROM	rn
+WHERE	rnk = 1;
+
+-- Solution given on LeetCode
+# Write your MySQL query statement below
+WITH rn AS (SELECT d.name AS Department, e.name AS Employee, e.salary AS Salary,
+        DENSE_RANK() OVER(PARTITION BY d.name ORDER BY e.salary DESC) as rnk
+FROM    Employee e LEFT JOIN Department d
+ON      e.departmentid = d.id)
+
+SELECT  Department, Employee, Salary
+FROM    rn
+WHERE   rnk = 1;
+
+
+-- QUESTION: Find the departments Top Three Salaries
+
+-- Solution
+WITH rn AS (SELECT d.name AS Department, e.name AS Employee, e.salary AS Salary,
+        DENSE_RANK() OVER(PARTITION BY d.name ORDER BY e.salary DESC) as rnk
+FROM    Employee e LEFT JOIN Department d
+ON      e.departmentid = d.id)
+
+SELECT  Department, Employee, Salary
+FROM    rn
+WHERE   rnk IN (1, 2, 3);
+
+
+-- ---- 4/12/2025 -------
+-- Write a solution to find the customer_number for the customer who has placed the largest number of orders.
+-- The test cases are generated so that exactly one customer will have placed more orders than any other customer.
+WITH rn AS (SELECT  customer_number, COUNT(order_number) AS num_orders
+            FROM    Orders
+            GROUP BY    customer_number)
+
+SELECT  customer_number
+FROM    rn
+WHERE   num_orders = (SELECT MAX(num_orders) FROM rn);
+
+
+-- LeetCode QUESTION
+-- Write an SQL query to find for each month and country, the number of transactions and their total amount, the number of approved transactions and their total amount.
+SELECT  DATE_FORMAT(trans_date, '%Y-%m') AS month,
+        country,
+        COUNT(id) AS trans_count,
+        SUM(State = 'approved') AS approved_count,
+        SUM(amount) AS trans_total_amount,
+        SUM(IF(state = 'approved', amount, 0)) AS approved_total_amount
+FROM    Transactions
+GROUP BY    DATE_FORMAT(trans_date, '%Y-%m'), country;
+
+-- LeetCode QUESTION
+-- Write a solution to find the daily active user count for a period of 30 days ending 2019-07-27 inclusively.
+-- A user was active on someday if they made at least one activity on that day.
+
+SELECT  activity_date AS day, COUNT(DISTINCT user_id) AS active_users
+FROM    Activity
+WHERE   activity_date <= '2019-07-27'
+AND     DATEDIFF('2019-07-27', activity_date) < 30
+GROUP BY    activity_date;
+
+
+/*
+Write a solution to:
+Find the name of the user who has rated the greatest number of movies. In case of a tie, return the lexicographically smaller user name.
+Find the movie name with the highest average rating in February 2020. In case of a tie, return the lexicographically smaller movie name.
+*/
+# USING a CTE
+WITH un AS (SELECT     u.name AS 'name'
+			FROM        Movies m INNER JOIN MovieRating mr
+			ON          m.movie_id = mr.movie_id
+			INNER JOIN  Users u
+			ON          u.user_id = mr.user_id
+			GROUP BY    u.user_id, u.name
+			ORDER BY    COUNT(*) DESC, u.name ASC
+			LIMIT       1),
+
+	t AS	(SELECT     m.title AS 'name'
+			FROM        Movies m INNER JOIN MovieRating mr
+			ON          m.movie_id = mr.movie_id
+			INNER JOIN  Users u
+			ON          u.user_id = mr.user_id
+			WHERE       mr.created_at >= '2020-02-01' AND mr.created_at < '2020-03-01'
+			GROUP BY    m.movie_id, m.title
+			ORDER BY    AVG(mr.rating) DESC, m.title ASC
+			LIMIT       1)
+            
+SELECT	name
+FROM	un
+
+UNION ALL
+
+SELECT	name
+FROM	t;
+
+
+-- ---- 5/12/2025 -------
+-- LeetCode QUESTION: Write a solution to report the customer ids from the Customer table that bought all the products in the Product table.
+
+SELECT      customer_id
+FROM        Customer
+GROUP BY    customer_id
+HAVING      COUNT(DISTINCT product_key) = (SELECT COUNT(*) FROM  product);
+
+
+/*
+LeetCode Question: Each node in the tree can be one of three types:
+
+"Leaf": if the node is a leaf node.
+"Root": if the node is the root of the tree.
+"Inner": If the node is neither a leaf node nor a root node.
+Write a solution to report the type of each node in the tree.
+
+Return the result table in any order.
+*/
+# Solution
+SELECT  id,
+        CASE WHEN p_id IS NULL THEN 'Root'
+             WHEN id IN (SELECT  p_id    FROM    Tree) THEN 'Inner'
+             ELSE 'Leaf'
+        END AS type
+FROM    Tree;
+
+
+/*
+The cancellation rate is computed by dividing the number of canceled (by client or driver)
+requests with unbanned users by the total number of requests with unbanned users on that day.
+
+Write a solution to find the cancellation rate of requests with unbanned users
+(both client and driver must not be banned) each day between "2013-10-01" and "2013-10-03"
+with at least one trip. Round Cancellation Rate to two decimal points.
+*/
+# Solution
+SELECT  request_at AS Day,
+        ROUND(SUM(Status IN ('cancelled_by_driver', 'cancelled_by_client'))/COUNT(*),2) AS 'Cancellation Rate'
+FROM    Trips
+WHERE   request_at BETWEEN '2013-10-01' AND '2013-10-03'
+AND     client_id IN (SELECT users_id FROM Users WHERE banned = 'No' AND role = 'client')
+AND     driver_id IN (SELECT users_id from Users WHERE banned = 'No' AND role = 'driver')
+GROUP BY request_at;
+
+
+-- 
+# Solution
+WITH cte AS (SELECT  id, num,
+        LAG(num) OVER(ORDER BY id) prev,
+        LEAD(num) OVER(ORDER BY id) next
+FROM    logs)
+
+SELECT  num AS 'ConsecutiveNums'
+FROM    cte
+WHERE   num = prev
+AND     num = next;
+
+
+/*
+Write a solution to report the sum of all total investment values in 2016 tiv_2016, for all policyholders who:
+
+have the same tiv_2015 value as one or more other policyholders, and
+are not located in the same city as any other policyholder (i.e., the (lat, lon) attribute pairs must be unique).
+*/
+# Solution
+WITH a AS (SELECT  pid, tiv_2015, tiv_2016,
+        COUNT(*) OVER(PARTITION BY tiv_2015) AS dup_cnt,
+        lat, lon
+        FROM    Insurance)
+
+SELECT  ROUND(SUM(tiv_2016),2) tiv_2016
+FROM    a
+WHERE   dup_cnt > 1
+AND     (lat, lon) IN (
+            SELECT lat, lon
+            FROM Insurance
+            GROUP BY lat, lon
+            HAVING COUNT(*) = 1)
+;
