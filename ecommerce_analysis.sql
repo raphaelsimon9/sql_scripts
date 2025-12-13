@@ -512,7 +512,7 @@ GROUP BY o.customer_id;
 */
 
 
--- Revenue and Number of Customers By State
+-- QUESTION 25: Revenue and Number of Customers By State
 DESCRIBE	orders;
 DESCRIBE	customers;
 
@@ -525,7 +525,7 @@ GROUP BY	state
 ORDER BY	Num_of_Customers DESC;
 
 
--- Revenue and Number of Customers By City
+-- QUESTION 26: Revenue and Number of Customers By City
 SELECT	state, city,
 		COUNT(c.customer_id) Num_of_Customers,
 		ROUND(SUM(o.total_amount)) Total_Revenue_Generated
@@ -535,7 +535,7 @@ GROUP BY	state, city
 ORDER BY	state, city, Total_Revenue_Generated DESC;
 
 
--- Products with Declining Ratings. Compare recent ratings (last 3 months) vs older ratings. (Find products getting worse reviews now)
+-- QUESTION 27: Products with Declining Ratings. Compare recent ratings (last 3 months) vs older ratings. (Find products getting worse reviews now)
 WITH recent_reviews AS (SELECT	product_id,
 							AVG(rating) recent_review
 					FROM	reviews
@@ -577,3 +577,56 @@ SELECT	product_id, older_review, recent_review,
 		END	AS Review_Classification
 FROM	older_reviews
 ORDER BY	product_id ASC;
+
+
+-- QUESTION 28: Average Order Fulfillment Time. How long it takes from order placement to shipping
+SELECT * FROM orders LIMIT 5;
+
+-- Average Daily Fulfillment Time
+SELECT	order_date,
+		ROUND(AVG(DATEDIFF(shipping_date, order_date)), 1) AS 'Average Order Fulfillment Time',
+        CASE
+			WHEN ROUND(AVG(DATEDIFF(shipping_date, order_date)), 1) <= 3 THEN 'Early Delivery'
+		ELSE 'Late Delivery'
+        END AS Delivery_Status
+FROM	orders
+WHERE	shipping_date <> ''
+GROUP BY	order_date
+ORDER BY	order_date;
+
+-- Average Monthly Fulfillment Time
+SELECT	DATE_FORMAT(order_date, '%Y-%m') ym,
+		ROUND(AVG(DATEDIFF(shipping_date, order_date)), 1) AS 'Average Order Fulfillment Time',
+        CASE
+			WHEN ROUND(AVG(DATEDIFF(shipping_date, order_date)), 1) <= 3 THEN 'Early Delivery'
+		ELSE 'Late Delivery'
+        END AS Delivery_Status
+FROM	orders
+WHERE	shipping_date <> ''
+GROUP BY	ym
+ORDER BY	ym;
+
+-- Overall Average Fulfillment Time
+SELECT	ROUND(AVG(DATEDIFF(shipping_date, order_date)), 1) AS 'Overall Average Order Fulfillment Time'
+FROM	orders
+WHERE	shipping_date <> '';
+
+
+
+-- QUESTION 29: Payment Method Analysis. Payment methods by usage rate, average order value, and cancellation rate.
+SELECT	payment_method,
+		COUNT(*) AS Total_Orders,
+        ROUND(AVG(total_amount), 2) AS Avg_Order_Value,
+        ROUND(SUM(total_amount), 2) AS Total_Revenue,
+        COUNT(*) / (SELECT COUNT(*) FROM orders) * 100 AS Usage_Rate,
+        SUM(status LIKE '%Cancel%') AS Cancelled_Orders,
+        ROUND(SUM(status LIKE '%Cancel%') / COUNT(*) * 100, 2) AS Cancellation_Rate,
+        SUM(status LIKE '%Complete%') AS Completed_Orders,
+        ROUND(SUM(status LIKE '%Complete%') / COUNT(*) * 100, 2) AS Completed_Rate,
+        SUM(status LIKE '%Return%') AS Returned_Orders,
+        ROUND(SUM(status LIKE '%Return%') / COUNT(*) * 100, 2) AS Returned_Rate,
+        SUM(status LIKE '%Process%') AS Payment_Processing,
+        ROUND(SUM(status LIKE '%Process%') / COUNT(*) * 100, 2) AS Payment_Processing_Rate
+FROM	orders
+GROUP BY	payment_method
+ORDER BY	payment_method;
